@@ -114,12 +114,14 @@ public class StackedView extends RelativeLayout {
           fixZzIndex(mLastMotionX - x);
           mLastMotionX = x;
         }
+        scrollToInternal(false);
         break;
       }
       case MotionEvent.ACTION_UP:
       case MotionEvent.ACTION_CANCEL: {
         Log.i(TAG, "Pointer Up or Cancel detected");
         mActivePointerId = -1;
+        scrollToInternal(true);
         break;
       }
       case MotionEvent.ACTION_POINTER_UP: {
@@ -136,7 +138,6 @@ public class StackedView extends RelativeLayout {
         break;
       }
     }
-    scrollToInternal();
     if (callSuper) {
       // TODO
     }
@@ -201,23 +202,42 @@ public class StackedView extends RelativeLayout {
   }
 
   private void scrollTo(final int index) {
-    Log.i(TAG, "Scrolling to " + index);
     if (isScrolling) {
       return;
     }
+    Log.i(TAG, "Scrolling to " + index);
     isScrolling = true;
     new Thread(new Runnable() {
 
       @Override
       public void run() {
         final RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
-        int totalDistance = (current > index) ? (views[current].getWidth() - params.leftMargin)
-            : (views[current].getWidth() - params.rightMargin);
+        final boolean isRestoring = current == index;
+        final boolean toLeft = (isRestoring) ? params.leftMargin > 0 : current > index;
+        
+        Log.i(TAG,(isRestoring?"Restoring ":" Scrolling ")+(toLeft?"Left":"Right"));
 
-        int distance = totalDistance / duration;
-        while (Math.abs(params.leftMargin) < views[current].getWidth()) {
-          params.leftMargin += (current > index) ? distance : -distance;
-          params.rightMargin -= (current > index) ? distance : -distance;
+        int totalDistance = toLeft ? (views[current].getWidth() - params.rightMargin)
+            : (views[current].getWidth() - params.leftMargin);
+
+        int distance = totalDistance / (isRestoring?duration/3:duration);
+        if (distance == 0) {
+          distance = toLeft ? -1 : 1;
+        }
+        boolean needsMore;
+        if(isRestoring){
+          needsMore=params.leftMargin!=0;
+        }else{
+          needsMore=Math.abs(params.leftMargin) < views[current].getWidth();
+        }
+        while (needsMore) {
+          params.leftMargin += toLeft ? distance : -distance;
+          params.rightMargin -= toLeft ? distance : -distance;
+          if(isRestoring){
+            needsMore=(toLeft)?params.leftMargin<=0:params.leftMargin>=0;
+          }else{
+            needsMore=Math.abs(params.leftMargin) < views[current].getWidth();
+          }  
           views[current].post(new Runnable() {
 
             @Override
@@ -236,13 +256,15 @@ public class StackedView extends RelativeLayout {
 
           @Override
           public void run() {
-            // views[current].setVisibility(View.GONE);
             RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
             params.leftMargin = 0;
             params.rightMargin = 0;
             views[current].setLayoutParams(params);
+            Log.i(TAG,"Set Current Index to "+index);
             current = index;
-            fixZzIndex(0);
+            if(!isRestoring){
+              fixZzIndex(0);
+            }
             isScrolling = false;
           }
 
@@ -253,10 +275,14 @@ public class StackedView extends RelativeLayout {
 
   }
 
-  private void scrollToInternal() {
+  private void scrollToInternal(boolean canceled) {
     int nextIndex = scrollTestInternal();
-    if (nextIndex >= 0) {
-      scrollTo(nextIndex);
+    if (!canceled) {
+      if (nextIndex >= 0) {
+        scrollTo(nextIndex);
+      }
+    } else {
+      scrollTo(current);
     }
   }
 }
