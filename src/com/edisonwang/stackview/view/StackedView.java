@@ -6,9 +6,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.Interpolator;
 import android.widget.RelativeLayout;
-import android.widget.Scroller;
 
 public class StackedView extends RelativeLayout {
 
@@ -28,22 +26,22 @@ public class StackedView extends RelativeLayout {
 
   private int                 current;
 
-  private View                parent;
-
-  private int                 scroll;
+  private View                root;
 
   private boolean             isScrolling;
-
-  private Scroller            mScroller;
 
   public StackedView(Context context, AttributeSet attrs) {
     super(context, attrs);
     initStackedViews(context, (RelativeLayout)findViewById(android.R.id.primary), 0);
   }
 
-  public StackedView(Context context, RelativeLayout view, int n) {
+  public StackedView(Context context, RelativeLayout root, int n) {
     super(context);
-    initStackedViews(context, view, n);
+    initStackedViews(context, root, n);
+  }
+
+  public View getRoot() {
+    return root;
   }
 
   private void initStackedViews(Context context, RelativeLayout relativeLayout, int initialIndex) {
@@ -54,10 +52,8 @@ public class StackedView extends RelativeLayout {
     }
     size = views.length;
     setInitialViewIndex(initialIndex);
-    scroll = 0;
     isScrolling = false;
-    parent = relativeLayout;
-    mScroller = new Scroller(context, sInterpolator);
+    root = relativeLayout;
   }
 
   private void setInitialViewIndex(int n) {
@@ -69,28 +65,6 @@ public class StackedView extends RelativeLayout {
     }
     current = n;
   }
-
-  /**
-   * Implement this method to intercept all touch screen motion events. This allows you to watch events as they are
-   * dispatched to your children, and take ownership of the current gesture at any point.
-   * 
-   * Using this function takes some care, as it has a fairly complicated interaction with
-   * View.onTouchEvent(MotionEvent), and using it requires implementing that method as well as this one in the correct
-   * way. Events will be received in the following order:
-   * 
-   * You will receive the down event here. The down event will be handled either by a child of this view group, or given
-   * to your own onTouchEvent() method to handle; this means you should implement onTouchEvent() to return true, so you
-   * will continue to see the rest of the gesture (instead of looking for a parent view to handle it). Also, by
-   * returning true from onTouchEvent(), you will not receive any following events in onInterceptTouchEvent() and all
-   * touch processing must happen in onTouchEvent() like normal. For as long as you return false from this function,
-   * each following event (up to and including the final up) will be delivered first here and then to the target's
-   * onTouchEvent(). If you return true from here, you will not receive any following events: the target view will
-   * receive the same event but with the action ACTION_CANCEL, and all further events will be delivered to your
-   * onTouchEvent() method and no longer appear here. Parameters ev The motion event being dispatched down the
-   * hierarchy. Returns Return true to steal motion events from the children and have them dispatched to this ViewGroup
-   * through onTouchEvent(). The current target will receive an ACTION_CANCEL event, and no further messages will be
-   * delivered here.
-   */
 
   @Override
   public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -146,7 +120,6 @@ public class StackedView extends RelativeLayout {
       case MotionEvent.ACTION_CANCEL: {
         Log.i(TAG, "Pointer Up or Cancel detected");
         mActivePointerId = -1;
-        scroll = 0;
         break;
       }
       case MotionEvent.ACTION_POINTER_UP: {
@@ -164,8 +137,8 @@ public class StackedView extends RelativeLayout {
       }
     }
     scrollToInternal();
-    if(callSuper){
-      //TODO
+    if (callSuper) {
+      // TODO
     }
     return true;
   }
@@ -286,12 +259,4 @@ public class StackedView extends RelativeLayout {
       scrollTo(nextIndex);
     }
   }
-
-  private static final Interpolator sInterpolator = new Interpolator() {
-
-                                                    public float getInterpolation(float t) {
-                                                      t -= 1.0f;
-                                                      return t * t * t * t * t + 1.0f;
-                                                    }
-                                                  };
 }
