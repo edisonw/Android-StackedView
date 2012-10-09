@@ -1,0 +1,10 @@
+<resources>
+
+    <string name="app_name">CurlViewGroup</string>
+    <string name="hello_world_1">Hello world 1!</string>
+    <string name="hello_world_2">Hello world 2!</string>
+    <string name="hello_world_3">Hello world 3!</string>
+    <string name="menu_settings">Settings</string>
+    <string name="title_activity_main">MainActivity</string>
+
+</resources>
