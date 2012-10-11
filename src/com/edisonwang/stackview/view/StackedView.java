@@ -84,6 +84,7 @@ public class StackedView extends RelativeLayout {
 
   public void setRoot(RelativeLayout r) {
     root = r;
+    initStackedViews(getContext(), root, 0);
   }
 
   public RelativeLayout getRoot() {
@@ -350,5 +351,20 @@ public class StackedView extends RelativeLayout {
   @Override
   public void invalidate() {
     this.initStackedViews(getContext(), root, current);
+    super.invalidate();
+  }
+  
+  @Override
+  public void addView(View child){
+    if(root==this){
+      addStackedView(child,true);
+    }else{
+      super.addView(child);
+    }
+  }
+
+  public void addStackedView(View child,boolean attachToParent) {
+    root.addView(child);
+    initStackedViews(getContext(), getRoot(), current);
   }
 }
