@@ -29,6 +29,8 @@ public class StackedView extends RelativeLayout {
   private RelativeLayout      root;
 
   private boolean             isScrolling;
+  
+  private boolean             isScrollingRight; //Current+1 on top.
 
   public StackedView(Context context) {
     super(context);
@@ -100,6 +102,7 @@ public class StackedView extends RelativeLayout {
     size = views.length;
     setInitialViewIndex(initialIndex);
     isScrolling = false;
+    isScrollingRight = false;
     root = relativeLayout;
   }
 
@@ -192,25 +195,13 @@ public class StackedView extends RelativeLayout {
   }
 
   // INTERNAL *************************************
-  private void fixZzIndex(float deltaX) {
+
+  private void fixZzIndexLeft(float deltaX) {
     boolean toLeft = deltaX < 0;
-    boolean toRight = deltaX > 0;
-    if (toRight) {
-      if (current >= size - 1) {
-        return;
-      }
-    } else {
-      if (toLeft && current == 0) {
-        return;
-      }
-    }
-    // int indexTop=toLeft?current:current+1;
-    // int indexBottom=toLeft?current-1:current;
     RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
 
     if (params.leftMargin - deltaX < 0) {
       toLeft = true;
-      toRight = !toLeft;
     }
     int index = current;
     if (toLeft) {
@@ -244,6 +235,46 @@ public class StackedView extends RelativeLayout {
       }
     }
     views[current].setLayoutParams(params);
+  }
+  private void fixZzIndexRight(float deltaX) {
+    
+  }
+  private void fixZzIndex(float deltaX) {
+    boolean toLeft = deltaX < 0;
+    boolean toRight = deltaX > 0;
+    if (toRight) {
+      if (current >= size - 1) {
+        return;
+      }
+    } else {
+      if (toLeft && current == 0) {
+        return;
+      }
+    }
+    /**
+     * 2 Cases here.
+     * 
+     * ---If isScrollingRight = false
+     * Slide the view in current index to the RIGHT with POSITIVE left margin on current index, reveals the current-1 on bottom.
+     * ---No need to test anything here.
+     * Slide the view in current index to the LEFT  with POSITIVE left margin on current index, reveals the current-1 on bottom.
+     * 
+     * 
+     * ---If positive left margin on the current index turn negative, we set it to 0 immediately and let current+1 to have POSITIVE left margin = its width.
+     * ---Crossing this line sets isScrollingLeft to true.
+     * 
+     * ---If iScrollingRight = true;
+     * Slide the view in current+1 index to the RIGHT with POSITIVE left margin on current+1 index, reveals current on bottom. 
+     * ---It does not go over.   
+     * 
+     * 
+     */
+    if(isScrollingRight){
+      fixZzIndexRight(deltaX);
+    }else{
+      fixZzIndexLeft(deltaX);
+    }
+    
   }
 
   /**
