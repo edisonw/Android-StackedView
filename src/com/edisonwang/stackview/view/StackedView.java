@@ -30,7 +30,9 @@ public class StackedView extends RelativeLayout {
 
   private boolean             isScrolling;
 
-  private boolean             isScrollingRight;          // Current+1 on top.
+  private boolean             isScrollingRight;
+
+  private boolean             isPrepared;
 
   public StackedView(Context context) {
     super(context);
@@ -102,7 +104,7 @@ public class StackedView extends RelativeLayout {
     size = views.length;
     setInitialViewIndex(initialIndex);
     isScrolling = false;
-    isScrollingRight = false;
+    isPrepared = false;
     root = relativeLayout;
   }
 
@@ -202,29 +204,38 @@ public class StackedView extends RelativeLayout {
     params.rightMargin += deltaX;
     views[current].setLayoutParams(params);
     // Test
-    params = (LayoutParams)views[current].getLayoutParams();
     if (params.leftMargin < 0) {
       isScrollingRight = true;
-      params.leftMargin = 0;
-      params.rightMargin = 0;
-      views[current].setLayoutParams(params);
-      if (current < size - 1) {
-        params = (LayoutParams)views[current + 1].getLayoutParams();
-        params.leftMargin = views[current].getWidth();
-        params.rightMargin = -params.leftMargin;
-        views[current].bringToFront();
-        views[current + 1].setLayoutParams(params);
-        views[current + 1].setVisibility(View.VISIBLE);
-        views[current + 1].bringToFront();
-      }
-      if (current >= 1) {
-        views[current - 1].setVisibility(View.GONE);
-      }
+      prepareScrollingToRight();
     }
+  }
+
+  private void prepareScrollingToRight() {
+    Log.i(TAG, "Prepared Scrolling To Right");
+    RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+    params.leftMargin = 0;
+    params.rightMargin = 0;
+    views[current].setLayoutParams(params);
+    if (current < size - 1) {
+      params = (LayoutParams)views[current + 1].getLayoutParams();
+      params.leftMargin = views[current].getWidth();
+      params.rightMargin = -params.leftMargin;
+      views[current].bringToFront();
+      views[current + 1].setLayoutParams(params);
+      views[current + 1].setVisibility(View.VISIBLE);
+      views[current + 1].bringToFront();
+    }
+    if (current >= 1) {
+      views[current - 1].setVisibility(View.GONE);
+    }
+    this.isPrepared = true;
   }
 
   private void fixZzIndexRight(float deltaX) {
     // Move
+    if (current >= size - 1) {
+      return;
+    }
     RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
     params.leftMargin -= deltaX;
     params.rightMargin += deltaX;
@@ -232,16 +243,25 @@ public class StackedView extends RelativeLayout {
     // Test
     if (params.leftMargin > views[current].getWidth()) {
       isScrollingRight = false;
-      if (current >= 1) {
-        views[current - 1].bringToFront();
-        views[current - 1].setVisibility(View.VISIBLE);
-      }
-      views[current].bringToFront();
-      views[current + 1].setVisibility(View.GONE);
+      prepareScrollingToLeft();
     }
   }
 
+  private void prepareScrollingToLeft() {
+    Log.i(TAG, "Prepared Scrolling To Left");
+    if (current > 0) {
+      views[current - 1].bringToFront();
+      views[current - 1].setVisibility(View.VISIBLE);
+    }
+    views[current].bringToFront();
+    if (current < size - 1) {
+      views[current + 1].setVisibility(View.GONE);
+    }
+    this.isPrepared = true;
+  }
+
   private void fixZzIndex(float deltaX) {
+    Log.i(TAG, "Moving and Fixing Index.");
     boolean toLeft = deltaX < 0;
     boolean toRight = deltaX > 0;
     if (toRight) {
@@ -253,27 +273,23 @@ public class StackedView extends RelativeLayout {
         return;
       }
     }
-    /**
-     * 2 Cases here.
-     * 
-     * ---If isScrollingRight = false Slide the view in current index to the RIGHT with POSITIVE left margin on current
-     * index, reveals the current-1 on bottom. ---No need to test anything here. Slide the view in current index to the
-     * LEFT with POSITIVE left margin on current index, reveals the current-1 on bottom.
-     * 
-     * 
-     * ---If positive left margin on the current index turn negative, we set it to 0 immediately and let current+1 to
-     * have POSITIVE left margin = its width. ---Crossing this line sets isScrollingLeft to true.
-     * 
-     * ---If iScrollingRight = true; Slide the view in current+1 index to the RIGHT with POSITIVE left margin on
-     * current+1 index, reveals current on bottom. ---It does not go over.
-     * 
-     * 
-     */
-    if (isScrollingRight) {
-      Log.i(TAG, "Fix to right");
+    if (!isPrepared) {
+      if (toRight) {
+        isScrollingRight = true;
+        prepareScrollingToRight();
+      } else {
+        if (toLeft) {
+          isScrollingRight = false;
+          prepareScrollingToLeft();
+        }
+      }
+      this.isPrepared = true;
+    }
+    if (isPrepared && isScrollingRight) {
+      Log.i(TAG, "Fix to right, current: " + current);
       fixZzIndexRight(deltaX);
     } else {
-      Log.i(TAG, "Fix to left");
+      Log.i(TAG, "Fix to left, current: " + current);
       fixZzIndexLeft(deltaX);
     }
 
@@ -285,11 +301,17 @@ public class StackedView extends RelativeLayout {
    */
   private int scrollTestInternal() {
     final int width = views[current].getWidth();
-    RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
-    if (Math.abs(params.leftMargin) > width * threshold) {
-      if (params.leftMargin < 0) {
+    if (isScrollingRight) {
+      if (current >= size - 1) {
+        return -1;
+      }
+      RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
+      if (Math.abs(params.leftMargin) <= width * (1 - threshold)) {
         return current < size - 1 ? current + 1 : current;
-      } else {
+      }
+    } else {
+      RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+      if (Math.abs(params.leftMargin) > width * threshold) {
         return current > 0 ? current - 1 : current;
       }
     }
@@ -300,70 +322,147 @@ public class StackedView extends RelativeLayout {
     if (isScrolling) {
       return;
     }
-    Log.i(TAG, "Scrolling to " + index);
+    Log.i(TAG, "Scrolling to from current: " + current + " to " + index + " (" + (isScrollingRight ? "Right" : "Left")
+        + ")");
     isScrolling = true;
     new Thread(new Runnable() {
 
       @Override
       public void run() {
-        final RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
         final boolean isRestoring = current == index;
-        final boolean toLeft = (isRestoring) ? params.leftMargin > 0 : current > index;
+        if (isScrollingRight) {
 
-        Log.i(TAG, (isRestoring ? "Restoring " : " Scrolling ") + (toLeft ? "Left" : "Right"));
+          if (current + 1 > size - 1) {
+            isPrepared = false;
+            isScrolling = false;
+            return;
+          }
+          Log.i(TAG, (isRestoring ? " Restoring " : " Scrolling ") + (isRestoring ? "Right" : "Left") + " Currnet: "
+              + current);
 
-        int totalDistance = toLeft ? (views[current].getWidth() - params.rightMargin)
-            : (views[current].getWidth() - params.leftMargin);
+          final RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
 
-        int distance = totalDistance / (isRestoring ? duration / 3 : duration);
-        if (distance == 0) {
-          distance = toLeft ? -1 : 1;
-        }
-        boolean needsMore;
-        if (isRestoring) {
-          needsMore = params.leftMargin != 0;
-        } else {
-          needsMore = Math.abs(params.leftMargin) < views[current].getWidth();
-        }
-        while (needsMore) {
-          params.leftMargin += toLeft ? distance : -distance;
-          params.rightMargin -= toLeft ? distance : -distance;
+          int totalDistance = isRestoring ? (views[current].getWidth() - params.leftMargin) : (params.leftMargin); // >0
+
+          int distance = totalDistance / (isRestoring ? duration / 3 : duration);
+
+          if (distance == 0) {
+            distance = isRestoring ? 1 : -1;
+          }
+          boolean needsMore;
           if (isRestoring) {
-            needsMore = (toLeft) ? params.leftMargin <= 0 : params.leftMargin >= 0;
+            needsMore = params.leftMargin < views[current].getWidth();
+          } else {
+            needsMore = params.leftMargin > 0;
+          }
+          while (needsMore) {
+            params.leftMargin += isRestoring ? distance : -distance;
+            params.rightMargin = -params.leftMargin;
+            if (isRestoring) {
+              needsMore = params.leftMargin < views[current].getWidth();
+            } else {
+              needsMore = params.leftMargin > 0;
+            }
+            views[current + 1].post(new Runnable() {
+
+              @Override
+              public void run() {
+                views[current + 1].setLayoutParams(params);
+              }
+
+            });
+            try {
+              Thread.sleep(1);
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
+          }
+          views[current + 1].post(new Runnable() {
+
+            @Override
+            public void run() {
+              // ScrollRight And Not restoring
+              if (isRestoring) {
+                RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
+                params.leftMargin = views[current].getWidth();
+                params.rightMargin = -params.leftMargin;
+                views[current + 1].setLayoutParams(params);
+              } else {
+                Log.i(TAG, "Set Current Index to " + index);
+                current = index;
+                RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+                params.leftMargin = 0;
+                params.rightMargin = 0;
+                views[current].setLayoutParams(params);
+                views[current].bringToFront();
+              }
+              isPrepared = false;
+              isScrolling = false;
+            }
+
+          });
+        } else {
+          final RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+          final boolean toLeft = (isRestoring) ? params.leftMargin > 0 : current > index;
+
+          Log.i(TAG, (isRestoring ? "  Restoring " : "  Scrolling ") + (toLeft ? "Left" : "Right"));
+
+          int totalDistance = !isRestoring ? (views[current].getWidth() - params.rightMargin)
+              : (views[current].getWidth() - params.leftMargin);
+
+          int distance = totalDistance / (isRestoring ? duration / 3 : duration);
+          if (distance == 0) {
+            distance = toLeft ? -1 : 1;
+          }
+          boolean needsMore;
+          if (isRestoring) {
+            needsMore = params.leftMargin != 0;
           } else {
             needsMore = Math.abs(params.leftMargin) < views[current].getWidth();
+          }
+          while (needsMore) {
+            params.leftMargin += toLeft ? distance : -distance;
+            params.rightMargin = -params.leftMargin;
+            if (isRestoring) {
+              needsMore = (toLeft) ? params.leftMargin <= 0 : params.leftMargin >= 0;
+            } else {
+              needsMore = Math.abs(params.leftMargin) < views[current].getWidth();
+            }
+            views[current].post(new Runnable() {
+
+              @Override
+              public void run() {
+                views[current].setLayoutParams(params);
+              }
+
+            });
+            try {
+              Thread.sleep(1);
+            } catch (InterruptedException e) {
+              e.printStackTrace();
+            }
           }
           views[current].post(new Runnable() {
 
             @Override
             public void run() {
-              views[current].setLayoutParams(params);
+              // ScrollRight And Not restoring
+              if (isRestoring) {
+                RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+                params.leftMargin = 0;
+                params.rightMargin = 0;
+                views[current].setLayoutParams(params);
+              } else {
+                Log.i(TAG, "Set Current Index to " + index);
+                current = index;
+                views[current].bringToFront();
+              }
+              isPrepared = false;
+              isScrolling = false;
             }
 
           });
-          try {
-            Thread.sleep(1);
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
         }
-        views[current].post(new Runnable() {
-
-          @Override
-          public void run() {
-            RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
-            params.leftMargin = 0;
-            params.rightMargin = 0;
-            views[current].setLayoutParams(params);
-            Log.i(TAG, "Set Current Index to " + index);
-            current = index;
-            if (!isRestoring) {
-              fixZzIndex(0);
-            }
-            isScrolling = false;
-          }
-
-        });
       }
 
     }).start();
