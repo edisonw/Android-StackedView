@@ -29,8 +29,8 @@ public class StackedView extends RelativeLayout {
   private RelativeLayout      root;
 
   private boolean             isScrolling;
-  
-  private boolean             isScrollingRight; //Current+1 on top.
+
+  private boolean             isScrollingRight;          // Current+1 on top.
 
   public StackedView(Context context) {
     super(context);
@@ -45,7 +45,7 @@ public class StackedView extends RelativeLayout {
   public StackedView(Context context, RelativeLayout root) {
     super(context);
     initStackedViews(context, root, 0);
-    if(root!=this){
+    if (root != this) {
       addView(root);
     }
   }
@@ -53,7 +53,7 @@ public class StackedView extends RelativeLayout {
   public StackedView(Context context, RelativeLayout root, int n) {
     super(context);
     initStackedViews(context, root, n);
-    if(root!=this){
+    if (root != this) {
       addView(root);
     }
   }
@@ -71,7 +71,7 @@ public class StackedView extends RelativeLayout {
   public StackedView(Context context, AttributeSet attrs, RelativeLayout root) {
     super(context);
     initStackedViews(context, root, 0);
-    if(root!=this){
+    if (root != this) {
       addView(root);
     }
   }
@@ -79,7 +79,7 @@ public class StackedView extends RelativeLayout {
   public StackedView(Context context, AttributeSet attrs, RelativeLayout root, int n) {
     super(context);
     initStackedViews(context, root, n);
-    if(root!=this){
+    if (root != this) {
       addView(root);
     }
   }
@@ -92,7 +92,7 @@ public class StackedView extends RelativeLayout {
   public RelativeLayout getRoot() {
     return root;
   }
-  
+
   private void initStackedViews(Context context, RelativeLayout relativeLayout, int initialIndex) {
     int cCount = relativeLayout.getChildCount();
     this.views = new View[cCount];
@@ -156,7 +156,6 @@ public class StackedView extends RelativeLayout {
         break;
       }
       case MotionEvent.ACTION_MOVE: {
-        Log.i(TAG, "Move detected on page " + current);
         if ((!isScrolling) && mActivePointerId != -1) {
           // Scroll to follow the motion event
           final int activePointerIndex = MotionEventCompat.findPointerIndex(ev, mActivePointerId);
@@ -197,48 +196,51 @@ public class StackedView extends RelativeLayout {
   // INTERNAL *************************************
 
   private void fixZzIndexLeft(float deltaX) {
-    boolean toLeft = deltaX < 0;
+    // Move
     RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
-
-    if (params.leftMargin - deltaX < 0) {
-      toLeft = true;
-    }
-    int index = current;
-    if (toLeft) {
-      index = current + 1;
-      params = (LayoutParams)views[index].getLayoutParams();
-    }
-
     params.leftMargin -= deltaX;
     params.rightMargin += deltaX;
+    views[current].setLayoutParams(params);
+    // Test
+    params = (LayoutParams)views[current].getLayoutParams();
     if (params.leftMargin < 0) {
+      isScrollingRight = true;
+      params.leftMargin = 0;
+      params.rightMargin = 0;
+      views[current].setLayoutParams(params);
       if (current < size - 1) {
-        Log.i(TAG, "SHOW " + (current + 1));
+        params = (LayoutParams)views[current + 1].getLayoutParams();
+        params.leftMargin = views[current].getWidth();
+        params.rightMargin = -params.leftMargin;
+        views[current].bringToFront();
+        views[current + 1].setLayoutParams(params);
         views[current + 1].setVisibility(View.VISIBLE);
         views[current + 1].bringToFront();
-        views[current].bringToFront();
       }
-      if (current > 0) {
-        Log.i(TAG, "HIDE " + (current - 1));
+      if (current >= 1) {
         views[current - 1].setVisibility(View.GONE);
       }
-    } else {
-      if (current < size - 1) {
-        Log.i(TAG, "HIDE " + (current + 1));
-        views[current + 1].setVisibility(View.GONE);
-      }
-      if (current > 0) {
-        Log.i(TAG, "SHOW " + (current - 1));
-        views[current - 1].setVisibility(View.VISIBLE);
-        views[current - 1].bringToFront();
-        views[current].bringToFront();
-      }
     }
-    views[current].setLayoutParams(params);
   }
+
   private void fixZzIndexRight(float deltaX) {
-    
+    // Move
+    RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
+    params.leftMargin -= deltaX;
+    params.rightMargin += deltaX;
+    views[current + 1].setLayoutParams(params);
+    // Test
+    if (params.leftMargin > views[current].getWidth()) {
+      isScrollingRight = false;
+      if (current >= 1) {
+        views[current - 1].bringToFront();
+        views[current - 1].setVisibility(View.VISIBLE);
+      }
+      views[current].bringToFront();
+      views[current + 1].setVisibility(View.GONE);
+    }
   }
+
   private void fixZzIndex(float deltaX) {
     boolean toLeft = deltaX < 0;
     boolean toRight = deltaX > 0;
@@ -254,27 +256,27 @@ public class StackedView extends RelativeLayout {
     /**
      * 2 Cases here.
      * 
-     * ---If isScrollingRight = false
-     * Slide the view in current index to the RIGHT with POSITIVE left margin on current index, reveals the current-1 on bottom.
-     * ---No need to test anything here.
-     * Slide the view in current index to the LEFT  with POSITIVE left margin on current index, reveals the current-1 on bottom.
+     * ---If isScrollingRight = false Slide the view in current index to the RIGHT with POSITIVE left margin on current
+     * index, reveals the current-1 on bottom. ---No need to test anything here. Slide the view in current index to the
+     * LEFT with POSITIVE left margin on current index, reveals the current-1 on bottom.
      * 
      * 
-     * ---If positive left margin on the current index turn negative, we set it to 0 immediately and let current+1 to have POSITIVE left margin = its width.
-     * ---Crossing this line sets isScrollingLeft to true.
+     * ---If positive left margin on the current index turn negative, we set it to 0 immediately and let current+1 to
+     * have POSITIVE left margin = its width. ---Crossing this line sets isScrollingLeft to true.
      * 
-     * ---If iScrollingRight = true;
-     * Slide the view in current+1 index to the RIGHT with POSITIVE left margin on current+1 index, reveals current on bottom. 
-     * ---It does not go over.   
+     * ---If iScrollingRight = true; Slide the view in current+1 index to the RIGHT with POSITIVE left margin on
+     * current+1 index, reveals current on bottom. ---It does not go over.
      * 
      * 
      */
-    if(isScrollingRight){
+    if (isScrollingRight) {
+      Log.i(TAG, "Fix to right");
       fixZzIndexRight(deltaX);
-    }else{
+    } else {
+      Log.i(TAG, "Fix to left");
       fixZzIndexLeft(deltaX);
     }
-    
+
   }
 
   /**
@@ -384,17 +386,17 @@ public class StackedView extends RelativeLayout {
     this.initStackedViews(getContext(), root, current);
     super.invalidate();
   }
-  
+
   @Override
-  public void addView(View child){
-    if(root==this){
-      addStackedView(child,true);
-    }else{
+  public void addView(View child) {
+    if (root == this) {
+      addStackedView(child, true);
+    } else {
       super.addView(child);
     }
   }
 
-  public void addStackedView(View child,boolean attachToParent) {
+  public void addStackedView(View child, boolean attachToParent) {
     root.addView(child);
     initStackedViews(getContext(), getRoot(), current);
   }
