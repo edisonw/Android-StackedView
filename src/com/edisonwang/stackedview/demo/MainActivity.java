@@ -1,11 +1,11 @@
-package com.edisonwang.stackview.demo;
+package com.edisonwang.stackedview.demo;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.widget.RelativeLayout;
 
-import com.edisonwang.curlviewgroup.R;
-import com.edisonwang.stackview.view.StackedView;
+import com.edisonwang.stackedview.R;
+import com.edisonwang.stackedview.view.StackedView;
 
 public class MainActivity extends Activity {
 

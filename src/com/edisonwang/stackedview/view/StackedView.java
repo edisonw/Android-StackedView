@@ -1,4 +1,4 @@
-package com.edisonwang.stackview.view;
+package com.edisonwang.stackedview.view;
 
 import android.content.Context;
 import android.support.v4.view.MotionEventCompat;
