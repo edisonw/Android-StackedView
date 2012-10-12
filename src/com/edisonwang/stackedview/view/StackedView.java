@@ -10,6 +10,8 @@ import android.widget.RelativeLayout;
 
 public class StackedView extends RelativeLayout {
 
+  public static final boolean DEBUG     = true;
+
   public static final String  TAG       = "StackedViews";
 
   private float               mLastMotionX;
@@ -144,12 +146,12 @@ public class StackedView extends RelativeLayout {
     int action = ev.getAction();
     switch (action) {
       case MotionEvent.ACTION_DOWN: {
-        Log.i(TAG, "Down detected");
+        debug("Down detected");
         mLastMotionX = ev.getX();
         mActivePointerId = MotionEventCompat.getPointerId(ev, 0);
       }
       case MotionEventCompat.ACTION_POINTER_DOWN: {
-        Log.i(TAG, "Pointer Down detected");
+        debug("Pointer Down detected");
         callSuper = true;
         final int index = MotionEventCompat.getActionIndex(ev);
         final float x = MotionEventCompat.getX(ev, index);
@@ -170,7 +172,7 @@ public class StackedView extends RelativeLayout {
       }
       case MotionEvent.ACTION_UP:
       case MotionEvent.ACTION_CANCEL: {
-        Log.i(TAG, "Pointer Up or Cancel detected");
+        debug("Pointer Up or Cancel detected");
         mActivePointerId = -1;
         scrollToInternal(true);
         break;
@@ -198,6 +200,7 @@ public class StackedView extends RelativeLayout {
   // INTERNAL *************************************
 
   private void fixZzIndexLeft(float deltaX) {
+    debug("Fix to left, current: " + current);
     // Move
     RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
     params.leftMargin -= deltaX;
@@ -205,13 +208,14 @@ public class StackedView extends RelativeLayout {
     views[current].setLayoutParams(params);
     // Test
     if (params.leftMargin < 0) {
+      debug("Change to scrolling to right.");
       isScrollingRight = true;
       prepareScrollingToRight();
     }
   }
 
   private void prepareScrollingToRight() {
-    Log.i(TAG, "Prepared Scrolling To Right");
+    debug("Prepared Scrolling To Right");
     RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
     params.leftMargin = 0;
     params.rightMargin = 0;
@@ -232,6 +236,7 @@ public class StackedView extends RelativeLayout {
   }
 
   private void fixZzIndexRight(float deltaX) {
+    debug("Fix to right, current: " + current);
     // Move
     if (current < size - 1) {
       RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
@@ -251,7 +256,7 @@ public class StackedView extends RelativeLayout {
   }
 
   private void prepareScrollingToLeft() {
-    Log.i(TAG, "Prepared Scrolling To Left");
+    debug("Prepared Scrolling To Left");
     if (current > 0) {
       views[current - 1].bringToFront();
       views[current - 1].setVisibility(View.VISIBLE);
@@ -264,15 +269,17 @@ public class StackedView extends RelativeLayout {
   }
 
   private void fixZzIndex(float deltaX) {
-    Log.i(TAG, "Moving and Fixing Index.");
+    debug("Moving and Fixing Index.");
     boolean toLeft = deltaX < 0;
     boolean toRight = deltaX > 0;
     if (toRight) {
       if (current >= size - 1) {
+        debug("Return because current>size-1");
         return;
       }
     } else {
       if (toLeft && current == 0) {
+        debug("Return because current==0");
         return;
       }
     }
@@ -286,13 +293,10 @@ public class StackedView extends RelativeLayout {
           prepareScrollingToLeft();
         }
       }
-      this.isPrepared = true;
     }
     if (isPrepared && isScrollingRight) {
-      Log.i(TAG, "Fix to right, current: " + current);
       fixZzIndexRight(deltaX);
     } else {
-      Log.i(TAG, "Fix to left, current: " + current);
       fixZzIndexLeft(deltaX);
     }
 
@@ -325,8 +329,7 @@ public class StackedView extends RelativeLayout {
     if (isScrolling) {
       return;
     }
-    Log.i(TAG, "Scrolling to from current: " + current + " to " + index + " (" + (isScrollingRight ? "Right" : "Left")
-        + ")");
+    debug("Scrolling to from current: " + current + " to " + index + " (" + (isScrollingRight ? "Right" : "Left") + ")");
     isScrolling = true;
     new Thread(new Runnable() {
 
@@ -340,7 +343,7 @@ public class StackedView extends RelativeLayout {
             isScrolling = false;
             return;
           }
-          Log.i(TAG, (isRestoring ? " Restoring " : " Scrolling ") + (isRestoring ? "Right" : "Left") + " Currnet: "
+          debug((isRestoring ? " Restoring " : " Scrolling ") + (isRestoring ? "Right" : "Left") + " Currnet: "
               + current);
 
           final RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
@@ -391,7 +394,7 @@ public class StackedView extends RelativeLayout {
                 params.rightMargin = -params.leftMargin;
                 views[current + 1].setLayoutParams(params);
               } else {
-                Log.i(TAG, "Set Current Index to " + index);
+                debug("Set Current Index to " + index);
                 current = index;
                 RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
                 params.leftMargin = 0;
@@ -413,7 +416,7 @@ public class StackedView extends RelativeLayout {
 
           final RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
 
-          Log.i(TAG, (isRestoring ? "  Restoring " : "  Scrolling ") + (isRestoring ? "Left" : "Right"));
+          debug((isRestoring ? "  Restoring " : "  Scrolling ") + (isRestoring ? "Left" : "Right"));
 
           int totalDistance = isRestoring ? (params.leftMargin) : (views[current - 1].getWidth() - params.leftMargin);
 
@@ -460,7 +463,7 @@ public class StackedView extends RelativeLayout {
                 params.rightMargin = 0;
                 views[current].setLayoutParams(params);
               } else {
-                Log.i(TAG, "Set Current Index to " + index);
+                debug("Set Current Index to " + index);
                 views[current].setVisibility(View.GONE);
                 current = index;
                 views[current].setVisibility(View.VISIBLE);
@@ -491,7 +494,7 @@ public class StackedView extends RelativeLayout {
 
   @Override
   public void invalidate() {
-    this.initStackedViews(getContext(), root, current);
+    initStackedViews(getContext(), root, current);
     super.invalidate();
   }
 
@@ -507,5 +510,9 @@ public class StackedView extends RelativeLayout {
   public void addStackedView(View child, boolean attachToParent) {
     root.addView(child);
     initStackedViews(getContext(), getRoot(), current);
+  }
+
+  private static void debug(String msg) {
+    Log.i(TAG, msg);
   }
 }
