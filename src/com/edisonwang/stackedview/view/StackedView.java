@@ -2,6 +2,7 @@ package com.edisonwang.stackedview.view;
 
 import android.content.Context;
 import android.support.v4.view.MotionEventCompat;
+import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -10,44 +11,46 @@ import android.widget.RelativeLayout;
 
 public class StackedView extends RelativeLayout {
 
-  public static final boolean DEBUG     = true;
+  public static final boolean  DEBUG     = true;
 
-  private static final String TAG       = "StackedViews";
+  private static final String  TAG       = "StackedViews";
 
-  private static final double threshold = 0.2;
+  private static final double  threshold = 0.2;
 
-  private static final int    duration  = 250;
+  private static final int     duration  = 250;
 
-  private float               mLastMotionX;
+  private float                mLastMotionX;
 
-  private int                 mActivePointerId;
+  private int                  mActivePointerId;
 
-  private View[]              views;
+  private View[]               views;
 
-  private int                 size;
+  private int                  size;
 
-  private int                 current;
+  private int                  current;
 
-  private RelativeLayout      root;
+  private RelativeLayout       root;
 
-  private boolean             isScrolling;
+  private boolean              isScrolling;
 
-  private boolean             isScrollingRight;
+  private boolean              isScrollingRight;
 
-  private boolean             isPrepared;
+  private boolean              isPrepared;
 
-  private ScrollerRunner      scroller;
-  
-  private int                 topPage;
+  private ScrollerRunner       scroller;
+
+  private int                  topPage;
+
+  private OnPageChangeListener onPageChangeListener;
 
   public StackedView(Context context) {
     super(context);
     initStackedViews(context, this, 0);
   }
 
-  public StackedView(Context context, int n) {
+  public StackedView(Context context, int initialPage) {
     super(context);
-    initStackedViews(context, this, 0);
+    initStackedViews(context, this, initialPage);
   }
 
   public StackedView(Context context, RelativeLayout root) {
@@ -58,9 +61,9 @@ public class StackedView extends RelativeLayout {
     }
   }
 
-  public StackedView(Context context, RelativeLayout root, int n) {
+  public StackedView(Context context, RelativeLayout root, int initialPage) {
     super(context);
-    initStackedViews(context, root, n);
+    initStackedViews(context, root, initialPage);
     if (root != this) {
       addView(root);
     }
@@ -71,9 +74,9 @@ public class StackedView extends RelativeLayout {
     initStackedViews(context, this, 0);
   }
 
-  public StackedView(Context context, AttributeSet attrs, int n) {
+  public StackedView(Context context, AttributeSet attrs, int initialPage) {
     super(context);
-    initStackedViews(context, this, n);
+    initStackedViews(context, this, initialPage);
   }
 
   public StackedView(Context context, AttributeSet attrs, RelativeLayout root) {
@@ -84,9 +87,9 @@ public class StackedView extends RelativeLayout {
     }
   }
 
-  public StackedView(Context context, AttributeSet attrs, RelativeLayout root, int n) {
+  public StackedView(Context context, AttributeSet attrs, RelativeLayout root, int initialPage) {
     super(context);
-    initStackedViews(context, root, n);
+    initStackedViews(context, root, initialPage);
     if (root != this) {
       addView(root);
     }
@@ -100,14 +103,18 @@ public class StackedView extends RelativeLayout {
   public RelativeLayout getRoot() {
     return root;
   }
-  
-  public StackedView setTopPage(int topPage){
-    this.topPage=topPage;
+
+  public StackedView setTopPage(int topPage) {
+    this.topPage = topPage;
     return this;
   }
-  
-  public int getTopPage(){
+
+  public int getTopPage() {
     return topPage;
+  }
+
+  public void setOnPageChangedListener(OnPageChangeListener onPageChangeListener) {
+    this.onPageChangeListener = onPageChangeListener;
   }
 
   @Override
