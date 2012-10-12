@@ -12,15 +12,15 @@ public class StackedView extends RelativeLayout {
 
   public static final boolean DEBUG     = true;
 
-  public static final String  TAG       = "StackedViews";
-
-  private float               mLastMotionX;
-
-  private int                 mActivePointerId;
+  private static final String TAG       = "StackedViews";
 
   private static final double threshold = 0.2;
 
   private static final int    duration  = 250;
+
+  private float               mLastMotionX;
+
+  private int                 mActivePointerId;
 
   private View[]              views;
 
@@ -95,29 +95,6 @@ public class StackedView extends RelativeLayout {
 
   public RelativeLayout getRoot() {
     return root;
-  }
-
-  private void initStackedViews(Context context, RelativeLayout relativeLayout, int initialIndex) {
-    int cCount = relativeLayout.getChildCount();
-    this.views = new View[cCount];
-    for (int i = 0; i < cCount; i++) {
-      views[i] = relativeLayout.getChildAt(i);
-    }
-    size = views.length;
-    setInitialViewIndex(initialIndex);
-    isScrolling = false;
-    isPrepared = false;
-    root = relativeLayout;
-  }
-
-  private void setInitialViewIndex(int n) {
-    if (n >= size) {
-      throw new IllegalArgumentException("N is greater than the number of views");
-    }
-    for (int i = 0; i < size; i++) {
-      views[i].setVisibility(i == n ? View.VISIBLE : View.GONE);
-    }
-    current = n;
   }
 
   @Override
@@ -197,16 +174,57 @@ public class StackedView extends RelativeLayout {
     return true;
   }
 
+  @Override
+  public void invalidate() {
+    initStackedViews(getContext(), root, current);
+    super.invalidate();
+  }
+
+  @Override
+  public void addView(View child) {
+    if (root == this) {
+      addStackedView(child, true);
+    } else {
+      super.addView(child);
+    }
+  }
+
+  public void addStackedView(View child, boolean attachToParent) {
+    root.addView(child);
+    initStackedViews(getContext(), getRoot(), current);
+  }
+
   // INTERNAL *************************************
+
+  private void initStackedViews(Context context, RelativeLayout relativeLayout, int initialIndex) {
+    int cCount = relativeLayout.getChildCount();
+    this.views = new View[cCount];
+    for (int i = 0; i < cCount; i++) {
+      views[i] = relativeLayout.getChildAt(i);
+    }
+    size = views.length;
+    setInitialViewIndex(initialIndex);
+    isScrolling = false;
+    isPrepared = false;
+    root = relativeLayout;
+  }
+
+  private void setInitialViewIndex(int n) {
+    if (n >= size) {
+      throw new IllegalArgumentException("N is greater than the number of views");
+    }
+    for (int i = 0; i < size; i++) {
+      views[i].setVisibility(i == n ? View.VISIBLE : View.GONE);
+    }
+    current = n;
+  }
 
   private void fixZzIndexLeft(float deltaX) {
     debug("Fix to left, current: " + current);
-    // Move
     RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
     params.leftMargin -= deltaX;
     params.rightMargin += deltaX;
     views[current].setLayoutParams(params);
-    // Test
     if (params.leftMargin < 0) {
       debug("Change to scrolling to right.");
       isScrollingRight = true;
@@ -490,26 +508,6 @@ public class StackedView extends RelativeLayout {
     } else {
       scrollTo(current);
     }
-  }
-
-  @Override
-  public void invalidate() {
-    initStackedViews(getContext(), root, current);
-    super.invalidate();
-  }
-
-  @Override
-  public void addView(View child) {
-    if (root == this) {
-      addStackedView(child, true);
-    } else {
-      super.addView(child);
-    }
-  }
-
-  public void addStackedView(View child, boolean attachToParent) {
-    root.addView(child);
-    initStackedViews(getContext(), getRoot(), current);
   }
 
   private static void debug(String msg) {
