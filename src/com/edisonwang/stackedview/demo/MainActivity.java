@@ -13,6 +13,6 @@ public class MainActivity extends Activity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(new StackedView(this,(RelativeLayout)getLayoutInflater().inflate(R.layout.activity_main,null),1));
+    setContentView(new StackedView(this,(RelativeLayout)getLayoutInflater().inflate(R.layout.activity_main,null),1).setTopPage(1));
   }
 }

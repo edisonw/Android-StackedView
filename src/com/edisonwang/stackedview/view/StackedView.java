@@ -36,7 +36,9 @@ public class StackedView extends RelativeLayout {
 
   private boolean             isPrepared;
 
-  private ScrollerRunner scroller;
+  private ScrollerRunner      scroller;
+  
+  private int                 topPage;
 
   public StackedView(Context context) {
     super(context);
@@ -97,6 +99,15 @@ public class StackedView extends RelativeLayout {
 
   public RelativeLayout getRoot() {
     return root;
+  }
+  
+  public StackedView setTopPage(int topPage){
+    this.topPage=topPage;
+    return this;
+  }
+  
+  public int getTopPage(){
+    return topPage;
   }
 
   @Override
@@ -212,6 +223,7 @@ public class StackedView extends RelativeLayout {
     setIsScrolling(false);
     isPrepared = false;
     root = relativeLayout;
+    topPage = -1;
   }
 
   private void setInitialViewIndex(int n) {
@@ -360,12 +372,12 @@ public class StackedView extends RelativeLayout {
     debug("Scrolling to from current: " + current + " to " + index + " (" + (isScrollingRight ? "Right" : "Left") + ")");
     new Thread(getScroller(index)).start();
   }
-  
-  public synchronized ScrollerRunner getScroller(int index){
-    if(scroller==null){
-      scroller=new ScrollerRunner();
+
+  public synchronized ScrollerRunner getScroller(int index) {
+    if (scroller == null) {
+      scroller = new ScrollerRunner();
     }
-    scroller.index=index;
+    scroller.index = index;
     return scroller;
   }
 
@@ -383,157 +395,157 @@ public class StackedView extends RelativeLayout {
   private static void debug(String msg) {
     Log.i(TAG, msg);
   }
-  
-  public class ScrollerRunner implements Runnable{
-      public int index;
-    
-      @Override
-      public synchronized void run() {
-        final boolean isRestoring = current == index;
-        setIsScrolling(true);
-        if (isScrollingRight) {
-          if (current + 1 > size - 1) {
-            isPrepared = false;
-            setIsScrolling(false);
-            return;
-          }
-          debug((isRestoring ? " Restoring " : " Scrolling ") + (isRestoring ? "Right" : "Left") + " Currnet: "
-              + current);
 
-          final RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
+  public class ScrollerRunner implements Runnable {
 
-          int totalDistance = isRestoring ? (views[current].getWidth() - params.leftMargin) : (params.leftMargin); // >0
+    public int index;
 
-          int distance = totalDistance / (isRestoring ? duration / 3 : duration);
+    @Override
+    public synchronized void run() {
+      final boolean isRestoring = current == index;
+      setIsScrolling(true);
+      if (isScrollingRight) {
+        if (current + 1 > size - 1) {
+          isPrepared = false;
+          setIsScrolling(false);
+          return;
+        }
+        debug((isRestoring ? " Restoring " : " Scrolling ") + (isRestoring ? "Right" : "Left") + " Currnet: " + current);
 
-          if (distance == 0) {
-            distance = isRestoring ? 1 : -1;
-          }
-          boolean needsMore;
+        final RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
+
+        int totalDistance = isRestoring ? (views[current].getWidth() - params.leftMargin) : (params.leftMargin); // >0
+
+        int distance = Math.abs(totalDistance / (isRestoring ? duration / 3 : duration));
+
+        if (distance == 0) {
+          distance = isRestoring ? 1 : -1;
+        }
+        boolean needsMore;
+        if (isRestoring) {
+          needsMore = params.leftMargin < views[current].getWidth();
+        } else {
+          needsMore = params.leftMargin > 0;
+        }
+        int c = -1;
+        while (needsMore && c < 1000) {
+          c++;
+          params.leftMargin += isRestoring ? distance : -distance;
+          params.rightMargin = -params.leftMargin;
           if (isRestoring) {
             needsMore = params.leftMargin < views[current].getWidth();
           } else {
             needsMore = params.leftMargin > 0;
           }
-          int c = -1;
-          while (needsMore && c < 1000) {
-            c++;
-            params.leftMargin += isRestoring ? distance : -distance;
-            params.rightMargin = -params.leftMargin;
-            if (isRestoring) {
-              needsMore = params.leftMargin < views[current].getWidth();
-            } else {
-              needsMore = params.leftMargin > 0;
-            }
-            views[current + 1].post(new Runnable() {
-
-              @Override
-              public void run() {
-                views[current + 1].setLayoutParams(params);
-              }
-
-            });
-            try {
-              Thread.sleep(1);
-            } catch (InterruptedException e) {
-              e.printStackTrace();
-            }
-          }
           views[current + 1].post(new Runnable() {
 
             @Override
             public void run() {
-              // ScrollRight And Not restoring
-              if (isRestoring) {
-                RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
-                params.leftMargin = views[current].getWidth();
-                params.rightMargin = -params.leftMargin;
-                views[current + 1].setLayoutParams(params);
-              } else {
-                debug("Set Current Index to " + index);
-                current = index;
-                RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
-                params.leftMargin = 0;
-                params.rightMargin = 0;
-                views[current].setLayoutParams(params);
-                views[current].bringToFront();
-              }
-              isPrepared = false;
-              setIsScrolling(false);
+              views[current + 1].setLayoutParams(params);
             }
 
           });
-        } else {
-          if (current < 1) {
+          try {
+            Thread.sleep(1);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
+        views[current + 1].post(new Runnable() {
+
+          @Override
+          public void run() {
+            // ScrollRight And Not restoring
+            if (isRestoring) {
+              RelativeLayout.LayoutParams params = (LayoutParams)views[current + 1].getLayoutParams();
+              params.leftMargin = views[current].getWidth();
+              params.rightMargin = -params.leftMargin;
+              views[current + 1].setLayoutParams(params);
+            } else {
+              debug("Set Current Index to " + index);
+              current = index;
+              RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+              params.leftMargin = 0;
+              params.rightMargin = 0;
+              views[current].setLayoutParams(params);
+              views[current].bringToFront();
+            }
             isPrepared = false;
             setIsScrolling(false);
-            return;
           }
 
-          final RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+        });
+      } else {
+        if (current < 1) {
+          isPrepared = false;
+          setIsScrolling(false);
+          return;
+        }
 
-          debug((isRestoring ? "  Restoring " : "  Scrolling ") + (isRestoring ? "Left" : "Right"));
+        final RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
 
-          int totalDistance = isRestoring ? (params.leftMargin) : (views[current - 1].getWidth() - params.leftMargin);
+        debug((isRestoring ? "  Restoring " : "  Scrolling ") + (isRestoring ? "Left" : "Right"));
 
-          int distance = totalDistance / (isRestoring ? duration / 3 : duration);
-          if (distance == 0) {
-            distance = isRestoring ? -1 : 1;
-          }
-          boolean needsMore;
+        int totalDistance = isRestoring ? (params.leftMargin) : (views[current - 1].getWidth() - params.leftMargin);
+
+        int distance = Math.abs(totalDistance / (isRestoring ? duration / 3 : duration));
+        if (distance == 0) {
+          distance = isRestoring ? -1 : 1;
+        }
+        boolean needsMore;
+        if (isRestoring) {
+          needsMore = params.leftMargin > 0;
+        } else {
+          needsMore = params.leftMargin < views[current - 1].getWidth();
+        }
+        int c = -1;
+        while (needsMore && c < 1000) {
+          c++;
+          params.leftMargin += isRestoring ? -distance : distance;
+          params.rightMargin = -params.leftMargin;
           if (isRestoring) {
             needsMore = params.leftMargin > 0;
           } else {
-            needsMore = params.leftMargin < views[current - 1].getWidth();
+            needsMore = Math.abs(params.leftMargin) < views[current - 1].getWidth();
           }
-          int c = -1;
-          while (needsMore && c < 1000) {
-            c++;
-            params.leftMargin += isRestoring ? -distance : distance;
-            params.rightMargin = -params.leftMargin;
-            if (isRestoring) {
-              needsMore = params.leftMargin > 0;
-            } else {
-              needsMore = Math.abs(params.leftMargin) < views[current - 1].getWidth();
-            }
-            views[current].post(new Runnable() {
-
-              @Override
-              public void run() {
-                views[current].setLayoutParams(params);
-              }
-
-            });
-            try {
-              Thread.sleep(1);
-            } catch (InterruptedException e) {
-              e.printStackTrace();
-            }
-          }
-          debug("Finished scrolling.");
           views[current].post(new Runnable() {
 
             @Override
             public void run() {
-              // ScrollRight And Not restoring
-              if (isRestoring) {
-                RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
-                params.leftMargin = 0;
-                params.rightMargin = 0;
-                views[current].setLayoutParams(params);
-              } else {
-                debug("Set Current Index to " + index);
-                views[current].setVisibility(View.GONE);
-                current = index;
-                views[current].setVisibility(View.VISIBLE);
-                views[current].bringToFront();
-              }
-              isPrepared = false;
-              setIsScrolling(false);
+              views[current].setLayoutParams(params);
             }
 
           });
+          try {
+            Thread.sleep(1);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
         }
+        debug("Finished scrolling.");
+        views[current].post(new Runnable() {
+
+          @Override
+          public void run() {
+            // ScrollRight And Not restoring
+            if (isRestoring) {
+              RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
+              params.leftMargin = 0;
+              params.rightMargin = 0;
+              views[current].setLayoutParams(params);
+            } else {
+              debug("Set Current Index to " + index);
+              views[current].setVisibility(View.GONE);
+              current = index;
+              views[current].setVisibility(View.VISIBLE);
+              views[current].bringToFront();
+            }
+            isPrepared = false;
+            setIsScrolling(false);
+          }
+
+        });
       }
+    }
   }
 }
