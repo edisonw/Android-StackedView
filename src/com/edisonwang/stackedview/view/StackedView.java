@@ -36,6 +36,8 @@ public class StackedView extends RelativeLayout {
 
   private boolean             isPrepared;
 
+  private ScrollerRunner scroller;
+
   public StackedView(Context context) {
     super(context);
     initStackedViews(context, this, 0);
@@ -137,12 +139,15 @@ public class StackedView extends RelativeLayout {
         break;
       }
       case MotionEvent.ACTION_MOVE: {
+        debug("Pointer Move detected.");
         if ((!isScrolling) && mActivePointerId != -1) {
           // Scroll to follow the motion event
           final int activePointerIndex = MotionEventCompat.findPointerIndex(ev, mActivePointerId);
           final float x = MotionEventCompat.getX(ev, activePointerIndex);
           fixZzIndex(mLastMotionX - x);
           mLastMotionX = x;
+        } else {
+          debug("Did not perform move because scrolling :" + isScrolling + " and pointerId: " + mActivePointerId);
         }
         scrollToInternal(false);
         break;
@@ -204,7 +209,7 @@ public class StackedView extends RelativeLayout {
     }
     size = views.length;
     setInitialViewIndex(initialIndex);
-    isScrolling = false;
+    setIsScrolling(false);
     isPrepared = false;
     root = relativeLayout;
   }
@@ -343,22 +348,53 @@ public class StackedView extends RelativeLayout {
     return -1;
   }
 
-  private synchronized void scrollTo(final int index) {
+  private void setIsScrolling(boolean isScrolling) {
+    debug("setIsScrolling to " + isScrolling);
+    this.isScrolling = isScrolling;
+  }
+
+  private synchronized void scrollTo(int index) {
     if (isScrolling) {
       return;
     }
     debug("Scrolling to from current: " + current + " to " + index + " (" + (isScrollingRight ? "Right" : "Left") + ")");
-    isScrolling = true;
-    new Thread(new Runnable() {
+    new Thread(getScroller(index)).start();
+  }
+  
+  public synchronized ScrollerRunner getScroller(int index){
+    if(scroller==null){
+      scroller=new ScrollerRunner();
+    }
+    scroller.index=index;
+    return scroller;
+  }
 
+  private void scrollToInternal(boolean canceled) {
+    int nextIndex = scrollTestInternal();
+    if (!canceled) {
+      if (nextIndex >= 0) {
+        scrollTo(nextIndex);
+      }
+    } else {
+      scrollTo(current);
+    }
+  }
+
+  private static void debug(String msg) {
+    Log.i(TAG, msg);
+  }
+  
+  public class ScrollerRunner implements Runnable{
+      public int index;
+    
       @Override
       public synchronized void run() {
         final boolean isRestoring = current == index;
+        setIsScrolling(true);
         if (isScrollingRight) {
-
           if (current + 1 > size - 1) {
             isPrepared = false;
-            isScrolling = false;
+            setIsScrolling(false);
             return;
           }
           debug((isRestoring ? " Restoring " : " Scrolling ") + (isRestoring ? "Right" : "Left") + " Currnet: "
@@ -379,7 +415,9 @@ public class StackedView extends RelativeLayout {
           } else {
             needsMore = params.leftMargin > 0;
           }
-          while (needsMore) {
+          int c = -1;
+          while (needsMore && c < 1000) {
+            c++;
             params.leftMargin += isRestoring ? distance : -distance;
             params.rightMargin = -params.leftMargin;
             if (isRestoring) {
@@ -421,14 +459,14 @@ public class StackedView extends RelativeLayout {
                 views[current].bringToFront();
               }
               isPrepared = false;
-              isScrolling = false;
+              setIsScrolling(false);
             }
 
           });
         } else {
           if (current < 1) {
             isPrepared = false;
-            isScrolling = false;
+            setIsScrolling(false);
             return;
           }
 
@@ -448,13 +486,15 @@ public class StackedView extends RelativeLayout {
           } else {
             needsMore = params.leftMargin < views[current - 1].getWidth();
           }
-          while (needsMore) {
+          int c = -1;
+          while (needsMore && c < 1000) {
+            c++;
             params.leftMargin += isRestoring ? -distance : distance;
             params.rightMargin = -params.leftMargin;
             if (isRestoring) {
               needsMore = params.leftMargin > 0;
             } else {
-              needsMore = Math.abs(params.leftMargin) < views[current].getWidth();
+              needsMore = Math.abs(params.leftMargin) < views[current - 1].getWidth();
             }
             views[current].post(new Runnable() {
 
@@ -470,6 +510,7 @@ public class StackedView extends RelativeLayout {
               e.printStackTrace();
             }
           }
+          debug("Finished scrolling.");
           views[current].post(new Runnable() {
 
             @Override
@@ -488,29 +529,11 @@ public class StackedView extends RelativeLayout {
                 views[current].bringToFront();
               }
               isPrepared = false;
-              isScrolling = false;
+              setIsScrolling(false);
             }
 
           });
         }
       }
-
-    }).start();
-
-  }
-
-  private void scrollToInternal(boolean canceled) {
-    int nextIndex = scrollTestInternal();
-    if (!canceled) {
-      if (nextIndex >= 0) {
-        scrollTo(nextIndex);
-      }
-    } else {
-      scrollTo(current);
-    }
-  }
-
-  private static void debug(String msg) {
-    Log.i(TAG, msg);
   }
 }
