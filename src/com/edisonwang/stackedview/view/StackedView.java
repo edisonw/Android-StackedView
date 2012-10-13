@@ -145,7 +145,7 @@ public class StackedView extends RelativeLayout {
   @Override
   public boolean onTouchEvent(MotionEvent ev) {
     boolean callSuper = false;
-    if(size==0){
+    if (size == 0) {
       return super.onTouchEvent(ev);
     }
     int action = ev.getAction();
@@ -213,15 +213,24 @@ public class StackedView extends RelativeLayout {
 
   @Override
   public void addView(View child) {
-    if (root != this) {
-      addStackedView(child, true);
+    if (root == this) {
+      addStackedView(child);
     } else {
       super.addView(child);
     }
   }
 
-  public void addStackedView(View child, boolean attachToParent) {
-    root.addView(child);
+  /**
+   * Add view to root and reinitialize the view.
+   * 
+   * @param child
+   */
+  public void addStackedView(View child) {
+    if (root == this) {
+      super.addView(child);
+    } else {
+      root.addView(child);
+    }
     initStackedViews(getContext(), getRoot(), current);
   }
 
@@ -242,7 +251,7 @@ public class StackedView extends RelativeLayout {
   }
 
   private void setInitialViewIndex(int n) {
-    if (n!=0 && n >= size) {
+    if (n != 0 && n >= size) {
       throw new IllegalArgumentException("N is greater than the number of views");
     }
     for (int i = 0; i < size; i++) {
@@ -437,7 +446,7 @@ public class StackedView extends RelativeLayout {
         int distance = Math.abs(totalDistance / (isRestoring ? duration / 3 : duration));
 
         if (distance == 0) {
-          distance = isRestoring ? 1 : -1;
+          distance = 1;
         }
         boolean needsMore;
         if (isRestoring) {
@@ -445,9 +454,7 @@ public class StackedView extends RelativeLayout {
         } else {
           needsMore = params.leftMargin > 0;
         }
-        int c = -1;
-        while (needsMore && c < 1000) {
-          c++;
+        while (needsMore) {
           params.leftMargin += isRestoring ? distance : -distance;
           params.rightMargin = -params.leftMargin;
           if (isRestoring) {
@@ -511,7 +518,7 @@ public class StackedView extends RelativeLayout {
 
         int distance = Math.abs(totalDistance / (isRestoring ? duration / 3 : duration));
         if (distance == 0) {
-          distance = isRestoring ? -1 : 1;
+          distance = 1;
         }
         boolean needsMore;
         if (isRestoring) {
@@ -519,9 +526,7 @@ public class StackedView extends RelativeLayout {
         } else {
           needsMore = params.leftMargin < views[current - 1].getWidth();
         }
-        int c = -1;
-        while (needsMore && c < 1000) {
-          c++;
+        while (needsMore) {
           params.leftMargin += isRestoring ? -distance : distance;
           params.rightMargin = -params.leftMargin;
           if (isRestoring) {
