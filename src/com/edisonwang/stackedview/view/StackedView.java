@@ -15,9 +15,9 @@ public class StackedView extends RelativeLayout {
 
   private static final String  TAG       = "StackedViews";
 
-  private static final double  threshold = 0.2;
+  private double               threshold = 0.2;
 
-  private static final int     duration  = 250;
+  private int                  duration  = 250;
 
   private float                mLastMotionX;
 
@@ -113,6 +113,11 @@ public class StackedView extends RelativeLayout {
     return topPage;
   }
 
+  /**
+   * Currently only onPageSelected is implemented.
+   * 
+   * @param onPageChangeListener
+   */
   public void setOnPageChangedListener(OnPageChangeListener onPageChangeListener) {
     this.onPageChangeListener = onPageChangeListener;
   }
@@ -205,7 +210,7 @@ public class StackedView extends RelativeLayout {
 
   @Override
   public void addView(View child) {
-    if (root == this) {
+    if (root != this) {
       addStackedView(child, true);
     } else {
       super.addView(child);
@@ -234,7 +239,7 @@ public class StackedView extends RelativeLayout {
   }
 
   private void setInitialViewIndex(int n) {
-    if (n >= size) {
+    if (n!=0 && n >= size) {
       throw new IllegalArgumentException("N is greater than the number of views");
     }
     for (int i = 0; i < size; i++) {
@@ -257,6 +262,9 @@ public class StackedView extends RelativeLayout {
   }
 
   private void prepareScrollingToRight() {
+    if (topPage == current - 1) {
+      // TODO
+    }
     debug("Prepared Scrolling To Right");
     RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
     params.leftMargin = 0;
@@ -471,6 +479,9 @@ public class StackedView extends RelativeLayout {
             } else {
               debug("Set Current Index to " + index);
               current = index;
+              if (onPageChangeListener != null) {
+                onPageChangeListener.onPageSelected(index);
+              }
               RelativeLayout.LayoutParams params = (LayoutParams)views[current].getLayoutParams();
               params.leftMargin = 0;
               params.rightMargin = 0;
@@ -544,6 +555,9 @@ public class StackedView extends RelativeLayout {
               debug("Set Current Index to " + index);
               views[current].setVisibility(View.GONE);
               current = index;
+              if (onPageChangeListener != null) {
+                onPageChangeListener.onPageSelected(index);
+              }
               views[current].setVisibility(View.VISIBLE);
               views[current].bringToFront();
             }
