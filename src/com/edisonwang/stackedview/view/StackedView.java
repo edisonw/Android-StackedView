@@ -11,7 +11,7 @@ import android.widget.RelativeLayout;
 
 public class StackedView extends RelativeLayout {
 
-  public static final boolean  DEBUG     = true;
+  public static final boolean  DEBUG     = false;
 
   private static final String  TAG       = "StackedViews";
 
@@ -145,6 +145,9 @@ public class StackedView extends RelativeLayout {
   @Override
   public boolean onTouchEvent(MotionEvent ev) {
     boolean callSuper = false;
+    if(size==0){
+      return super.onTouchEvent(ev);
+    }
     int action = ev.getAction();
     switch (action) {
       case MotionEvent.ACTION_DOWN: {
@@ -210,7 +213,7 @@ public class StackedView extends RelativeLayout {
 
   @Override
   public void addView(View child) {
-    if (root != this) {
+    if (root == this) {
       addStackedView(child, true);
     } else {
       super.addView(child);
