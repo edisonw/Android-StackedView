@@ -213,7 +213,7 @@ public class StackedView extends RelativeLayout {
 
   @Override
   public void addView(View child) {
-    if (root == this) {
+    if (root != this) {
       addStackedView(child, true);
     } else {
       super.addView(child);
