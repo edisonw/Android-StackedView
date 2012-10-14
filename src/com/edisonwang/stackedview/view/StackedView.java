@@ -237,6 +237,9 @@ public class StackedView extends RelativeLayout {
   // INTERNAL *************************************
 
   private void initStackedViews(Context context, RelativeLayout relativeLayout, int initialIndex) {
+    if (relativeLayout == null) {
+      return;
+    }
     int cCount = relativeLayout.getChildCount();
     this.views = new View[cCount];
     for (int i = 0; i < cCount; i++) {
