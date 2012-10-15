@@ -11,13 +11,13 @@ import android.widget.RelativeLayout;
 
 public class StackedView extends RelativeLayout {
 
-  public static final boolean  DEBUG     = false;
+  public static final boolean  DEBUG            = false;
 
-  private static final String  TAG       = "StackedViews";
+  private static final String  TAG              = "StackedViews";
 
-  private double               threshold = 0.2;
+  private double               threshold        = 0.2;
 
-  private int                  duration  = 250;
+  private int                  duration         = 250;
 
   private float                mLastMotionX;
 
@@ -42,6 +42,8 @@ public class StackedView extends RelativeLayout {
   private int                  topPage;
 
   private OnPageChangeListener onPageChangeListener;
+
+  private boolean              scrollingByTouch = true;
 
   public StackedView(Context context) {
     super(context);
@@ -113,6 +115,10 @@ public class StackedView extends RelativeLayout {
     return topPage;
   }
 
+  public void setScrollingByTouch(boolean enabled) {
+    this.scrollingByTouch = enabled;
+  }
+
   /**
    * Currently only onPageSelected is implemented.
    * 
@@ -166,6 +172,9 @@ public class StackedView extends RelativeLayout {
       }
       case MotionEvent.ACTION_MOVE: {
         debug("Pointer Move detected.");
+        if(!scrollingByTouch){
+          break;
+        }
         if ((!isScrolling) && mActivePointerId != -1) {
           // Scroll to follow the motion event
           final int activePointerIndex = MotionEventCompat.findPointerIndex(ev, mActivePointerId);
