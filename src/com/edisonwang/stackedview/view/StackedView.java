@@ -11,7 +11,7 @@ import android.widget.RelativeLayout;
 
 public class StackedView extends RelativeLayout {
 
-  public static final boolean  DEBUG            = false;
+  public static final boolean  DEBUG            = true;
 
   private static final String  TAG              = "StackedViews";
 
@@ -145,13 +145,21 @@ public class StackedView extends RelativeLayout {
         break;
       }
     }
-    return super.onInterceptTouchEvent(ev);
+    boolean intercept=super.onInterceptTouchEvent(ev);
+    debug("onInterceptTouchEvent: "+intercept);
+    this.onTouchEvent(ev);
+    return false;
   }
 
+  public void setCurrent(int current){
+    this.current=current;
+  }
+  
   @Override
   public boolean onTouchEvent(MotionEvent ev) {
     boolean callSuper = false;
     if (size == 0) {
+      debug("Size == 0");
       return super.onTouchEvent(ev);
     }
     int action = ev.getAction();
@@ -172,7 +180,7 @@ public class StackedView extends RelativeLayout {
       }
       case MotionEvent.ACTION_MOVE: {
         debug("Pointer Move detected.");
-        if(!scrollingByTouch){
+        if (!scrollingByTouch) {
           break;
         }
         if ((!isScrolling) && mActivePointerId != -1) {
